@@ -1,0 +1,171 @@
+{
+  "name": "ingestion_bq",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        -208
+      ],
+      "id": "2a78b8fc-488a-4127-b008-ea6ccb95b8c2",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "method": "=GET",
+        "url": "https://drive.google.com/uc?export=download&id=1RXj_3txgmyX2Wyt9ZwM7l4axfi5A6EC-",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "text/csv"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        -192
+      ],
+      "id": "bee72c70-8093-4cd6-b9dd-4d4b6f21d27a",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import pandas as pd\nfrom datetime import datetime\nimport io\n\nraw_csv_data = items[0].json['data']\ndf = pd.read_csv(io.StringIO(raw_csv_data))\n\n# Add metadata\nsource_file = \"https://drive.google.com/uc?export=download&id=1RXj_3txgmyX2Wyt9ZwM7l4axfi5A6EC-\"\ndf['load_date'] = datetime.utcnow().isoformat()  # string ISO8601\ndf['source_file_name'] = source_file\n\n# Ensure 'date' is a YYYY-MM-DD string\ndf['date'] = pd.to_datetime(df['date']).dt.strftime(\"%Y-%m-%d\")\n\n# Build n8n items\noutput_items = []\nfor _, row in df.iterrows():\n    output_items.append({\n        'json': row.to_dict(),\n        'pairedItem': 0\n    })\n\n# Default values if missing\nfor item in output_items:\n    if not item['json'].get('date'):\n        item['json']['date'] = '2023-01-01'\n    if not item['json'].get('load_date'):\n        item['json']['load_date'] = datetime.utcnow().isoformat()\n\nreturn output_items\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -272
+      ],
+      "id": "91095cc3-65ac-4278-8acf-f715ec1bcb7e",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "insert",
+        "projectId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "query-470420"
+        },
+        "datasetId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "8figure_ads"
+        },
+        "tableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "ads_spend"
+        },
+        "options": {
+          "ignoreUnknownValues": true,
+          "skipInvalidRows": true,
+          "traceId": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleBigQuery",
+      "typeVersion": 2.1,
+      "position": [
+        256,
+        -48
+      ],
+      "id": "74a3f6c2-b77b-4836-a957-6435fc8c5fa6",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "googleApi": {
+          "id": "DwGhu5nxFxGNGFM1",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a stable insertId per row to avoid duplicates on retries\nconst makeId = (j) => [j.date, j.platform, j.account, j.campaign, j.country, j.device].join('|');\n\nreturn items.map((item, idx) => {\n  const j = item.json || {};\n  return {\n    json: {\n      ...j,\n      insertId: makeId(j)   // <= INSIDE json\n    },\n    pairedItem: item.pairedItem ?? { item: idx }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        32
+      ],
+      "id": "d51088c5-e381-4537-be19-ec5bc4b465c1",
+      "name": "Code1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1575ab00-049c-4b3d-880d-3deedc50742d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "96660e83a31d5d6d9a6e969688a1d82b7f33a5901d959c3ab6a373994af67c29"
+  },
+  "id": "yloUthpyKWkKcHjW",
+  "tags": []
+}

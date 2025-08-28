@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite
+*.db
+
+# Virtual environments
+venv/
+.env/
+.envrc
+*.env
+
+# Node.js / n8n
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+*.out
+*.err
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary / build
+dist/
+build/
+.cache/
+coverage/
+*.egg-info/
+.eggs/
+
+# Data (only keep sample CSVs if intentional)
+data/*
+!data/*.sample.csv
+
+# n8n backups / execution data (keep only exported workflows)
+.n8n/
+backups/
